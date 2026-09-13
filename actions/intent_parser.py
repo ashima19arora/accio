@@ -28,25 +28,40 @@ class Intent:
 
 # Wake words, assistant greetings, and polite command prefixes
 WAKE_PREFIX_REGEX = (
-    r'^(?:hey\s+accio|ok\s+accio|hello\s+accio|accio|akio|echo|'
+    r'^(?:'
+    r'hey\s+let\'?s\s+start|let\'?s\s+start|let\s+us\s+start|'
+    r'start(?:\s+(?:assistant|listening|up|accio))?|'
+    r'begin(?:\s+(?:assistant|listening|up|accio))?|let\'?s\s+begin|'
+    r'activate(?:\s+(?:accio|orb|assistant|listening))?|hey\s+activate|'
+    r'hey\s+accio|ok\s+accio|hello\s+accio|accio|akio|echo|'
     r'wake\s*up(?:\s+(?:up|wake\s*up|now|please))?|'
-    r'start(?:\s+(?:assistant|listening|up))?|'
     r'hey(?:\s+there)?|'
+    r'shuru\s*karo|chalu\s*karo|suno|jag\s*jao|uth\s*jao|'
     r'can\s+you(?:\s+please)?|could\s+you(?:\s+please)?|would\s+you(?:\s+please)?|'
     r'please(?:\s+tell\s+me)?|tell\s+me(?:\s+like)?|tell\s+me|'
-    r'show\s+me(?:\s+like)?|show\s+me)\b[,\s]*'
+    r'show\s+me(?:\s+like)?|show\s+me'
+    r')\b[,\s]*'
+)
+
+# Trailing execution delimiter keywords (for hands-free and push-to-talk users)
+EXECUTE_SUFFIX_REGEX = (
+    r'\b(?:please\s+)?(?:execute|done|finish|run\s*it|execute\s+karo)\s*$'
 )
 
 def clean_speech_text(text: str) -> str:
     """
-    Normalizes transcript text by lowercasing, stripping punctuation, and removing wake prefixes iteratively.
+    Normalizes transcript text by lowercasing, stripping punctuation,
+    iteratively removing wake prefixes, and stripping trailing execution delimiters ('execute', 'done', etc.).
     """
     cleaned = text.lower().strip()
+    # Normalize internal punctuation (commas, question marks, exclamation) to single space
+    cleaned = re.sub(r'[,;:\?!]+', ' ', cleaned)
     # Strip common leading/trailing punctuation
     cleaned = re.sub(r'^[^\w]+', '', cleaned)
     cleaned = re.sub(r'[^\w\s]+$', '', cleaned)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
 
-    # Iteratively strip compound prefixes like "Could you please...", "Can you please tell me like..."
+    # Iteratively strip compound prefixes like "Could you please...", "Hey let's start...", "Can you please tell me..."
     while True:
         prev = cleaned
         temp = re.sub(WAKE_PREFIX_REGEX, '', cleaned, flags=re.IGNORECASE).strip()
@@ -57,12 +72,24 @@ def clean_speech_text(text: str) -> str:
 
         # If stripping left a non-empty remainder (e.g. "open youtube"), adopt it.
         # If stripping emptied it out, it means the entire phrase was a greeting / wake phrase
-        # (e.g. "hey", "hello accio", "wake up"). In that case, preserve `cleaned` for GREETING matching.
+        # (e.g. "hey", "hello accio", "hey let's start", "activate"). In that case, preserve `cleaned` for GREETING matching.
         if temp:
             cleaned = temp
         else:
             break
 
+        if cleaned == prev:
+            break
+
+    # Strip trailing execute delimiters (e.g., "open visual studio code execute" -> "open visual studio code")
+    while True:
+        prev = cleaned
+        temp = re.sub(EXECUTE_SUFFIX_REGEX, '', cleaned, flags=re.IGNORECASE).strip()
+        temp = re.sub(r'[^\w\s]+$', '', temp).strip()
+        if temp:
+            cleaned = temp
+        else:
+            break
         if cleaned == prev:
             break
 
@@ -414,25 +441,65 @@ def parse_intent(transcription: str) -> Intent:
     if re.search(r'\b(lock\s+computer|lock\s+screen|lock\s+workstation|lock\s+pc|computer\s+lock\s+karo)\b', text):
         return Intent(name="LOCK_SCREEN", params={}, raw_text=transcription)
 
-    # 16. Greetings & Identity (English & Hindi)
-    if re.search(r'^(?:hello|hi|hey|wake\s*up(?:\s+(?:up|wake\s*up|now))?|start|good\s+morning|good\s+afternoon|good\s+evening|namaste|namaskar|pranam)(?:\s+accio)?$', text) or \
-       re.search(r'^(?:who\s+are\s+you|what\s+can\s+you\s+do|how\s+are\s+you(?:\s+doing)?|help(?:\s+me)?|aap\s+kaun\s+ho|tum\s+kaun\s+ho)$', text):
+    # 16. Conversational Queries: Wellbeing, Identity, Capabilities, Greetings
+    if re.search(r'\b(?:how\s+are\s+you(?:\s+doing)?|how\'?s?\s+it\s+going|how\s+do\s+you\s+do|how\s+are\s+things|aap\s+kaise\s+ho|kaise\s+ho|kya\s+haal\s+hai)\b', text):
+        return Intent(name="WELLBEING_QUERY", params={"original": text}, raw_text=transcription)
+
+    if re.search(r'\b(?:who\s+are\s+you|what\s+is\s+your\s+name|aap\s+kaun\s+ho|tum\s+kaun\s+ho|naam\s+kya\s+hai)\b', text):
+        return Intent(name="IDENTITY_QUERY", params={"original": text}, raw_text=transcription)
+
+    if re.search(r'\b(?:what\s+can\s+you\s+do|help(?:\s+me)?|capabilities|what\s+do\s+you\s+do|kya\s+kar\s+sakte\s+ho|kaam\s+kya\s+hai)\b', text):
+        return Intent(name="CAPABILITIES_QUERY", params={"original": text}, raw_text=transcription)
+
+    if re.search(r'^(?:hello|hi|hey|wake\s*up(?:\s+(?:up|wake\s*up|now))?|start|begin|activate|hey\s+let\'?s\s+start|let\'?s\s+start|let\s+us\s+start|accio|akio|echo|shuru\s*karo|chalu\s*karo|suno|good\s+morning|good\s+afternoon|good\s+evening|namaste|namaskar|pranam)(?:\s+accio)?$', text):
         return Intent(name="GREETING", params={"original": text}, raw_text=transcription)
 
     # 17. Exit / Shutdown Assistant (English & Hindi)
     if re.search(r'\b(exit|quit|stop\s+listening|goodbye|bye|alvida|band\s+karo\s+accio)\b', text):
         return Intent(name="EXIT_ASSISTANT", params={}, raw_text=transcription)
 
-    # 18. Factual & Knowledge Q&A Queries ("who is X", "what is X", "tell me about X", "explain X", Hindi: "X kya hai", "X ke baare mein batao")
-    # Matches informational queries to retrieve direct spoken answers
+    # 18. Explicit Web Search Queries (ONLY when explicitly requested by saying "search" or "google")
+    search_explicit = re.search(
+        r'^(?:search(?:\s+(?:the\s+)?web|\s+(?:on\s+)?google)?\s+for|google|search\s+web\s+for)\s+(.+)$',
+        text,
+        re.IGNORECASE
+    )
+    if search_explicit:
+        query = search_explicit.group(1).strip()
+        return Intent(name="SEARCH_WEB", params={"query": query}, raw_text=transcription)
+
+    hi_search_explicit = re.search(
+        r'^(.+?)\s+(?:google\s+par\s+search\s+karo|search\s+karo|dhoondo)$',
+        text,
+        re.IGNORECASE
+    )
+    if hi_search_explicit:
+        query = hi_search_explicit.group(1).strip()
+        return Intent(name="SEARCH_WEB", params={"query": query}, raw_text=transcription)
+
+    # 18b. Screen Context Queries (Understand background screen, active window, error, or page)
+    screen_patterns = [
+        r'\b(?:what\s+is|what\'?s)\s+(?:on\s+)?(?:my\s+|the\s+)?screen\b',
+        r'\b(?:explain|describe)\s+(?:what\s+i\'?m?\s+looking\s+at|this\s+screen|the\s+screen|my\s+screen)\b',
+        r'\b(?:summarize|summary\s+of)\s+(?:this\s+page|the\s+page|this\s+screen|my\s+screen|what\'?s\s+on\s+screen)\b',
+        r'\b(?:what\s+does\s+this\s+error\s+(?:say|mean)|explain\s+this\s+error|what\s+is\s+this\s+error)\b',
+        r'\b(?:what\s+is\s+this\s+window|which\s+(?:app|application|window)\s+(?:is\s+this|am\s+i\s+on|is\s+open))\b',
+        r'\b(?:read\s+(?:what\'?s\s+on\s+)?(?:my\s+|the\s+)?screen|read\s+this\s+page)\b',
+        r'\b(?:help\s+me\s+understand\s+(?:this\s+page|this\s+screen|this\s+window))\b',
+        r'\b(?:screen\s+par\s+kya\s+hai|screen\s+pe\s+kya\s+hai|screen\s+explain\s+karo|error\s+kya\s+hai|kaunsa\s+app\s+khula\s+hai)\b'
+    ]
+    if any(re.search(p, text, re.IGNORECASE) for p in screen_patterns):
+        return Intent(name="SCREEN_CONTEXT_QUERY", params={"question": text}, raw_text=transcription)
+
+    # 19. Factual & Knowledge Q&A Queries ("who is X", "what is X", "tell me about X", "explain X", Hindi: "X kya hai", "X ke baare mein batao")
+    # Matches informational queries to retrieve direct spoken answers then and there
     en_question_match = re.search(
-        r'^(?:what\s+is|who\s+is|where\s+is|why\s+is|how\s+does|tell\s+me\s+about|about|explain|define)\s+(.+)$',
+        r'^(?:what\s+is|what\s+are|who\s+is|who\s+are|where\s+is|where\s+are|why\s+is|why\s+are|how\s+does|how\s+do|how\s+is|how\s+to|tell\s+me\s+about|about|explain|define|can\s+you\s+explain)\s+(.+)$',
         text,
         re.IGNORECASE
     )
     if en_question_match:
         subject = en_question_match.group(1).strip()
-        # Clean trailing question mark and leading articles
         subject = re.sub(r'[\?!.]+$', '', subject)
         subject = re.sub(r'^(?:the|a|an)\s+', '', subject).strip()
         return Intent(name="KNOWLEDGE_QUERY", params={"query": subject, "full_text": text}, raw_text=transcription)
@@ -446,15 +513,15 @@ def parse_intent(transcription: str) -> Intent:
         subject = hi_question_match.group(1).strip()
         return Intent(name="KNOWLEDGE_QUERY", params={"query": subject, "full_text": text}, raw_text=transcription)
 
-    # 19. Fallback: If starts with "open" followed by arbitrary words
+    # 20. Fallback: If starts with "open" followed by arbitrary words
     open_fallback = re.search(r'^(?:open|launch)\s+(.+)$', text)
     if open_fallback:
         target = open_fallback.group(1).strip()
         return Intent(name="OPEN_WEBSITE", params={"target": target}, confidence=0.7, raw_text=transcription)
 
-    # 20. Conversational Search Fallback for multi-word queries
+    # 21. For conversational multi-word questions, route to KNOWLEDGE_QUERY to speak the answer then and there instead of opening Google
     words = text.split()
     if len(words) >= 3 and not text.startswith(('exit', 'quit', 'bye')):
-        return Intent(name="SEARCH_WEB", params={"query": text}, confidence=0.6, raw_text=transcription)
+        return Intent(name="KNOWLEDGE_QUERY", params={"query": text, "full_text": text}, confidence=0.7, raw_text=transcription)
 
     return Intent(name="UNKNOWN", params={"raw": text}, confidence=0.0, raw_text=transcription)

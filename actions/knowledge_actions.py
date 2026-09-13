@@ -97,10 +97,10 @@ def fetch_duckduckgo_answer(query: str) -> str:
         pass
     return ""
 
-def answer_knowledge_query(query: str, lang: str = 'en') -> bool:
+def answer_knowledge_query(query: str, lang: str = 'en', fallback_subject: str = "") -> bool:
     """
-    Answers a factual query verbally and displays the concise summary.
-    If no instant answer is retrieved, automatically searches Google in browser.
+    Answers an informational or conversational query verbally using OpenRouter LLM intelligence
+    with multi-key failover, falling back gracefully to Wikipedia/DuckDuckGo if offline.
     """
     clean_query = query.strip()
     if not clean_query:
@@ -108,9 +108,24 @@ def answer_knowledge_query(query: str, lang: str = 'en') -> bool:
 
     notify(f"Looking up answer for: '{clean_query}'")
 
-    summary = fetch_wikipedia_summary(clean_query)
+    # 1. Primary: High-speed OpenRouter LLM Intelligence with Multi-Key Failover
+    try:
+        from .llm_client import ask_accio_llm
+        llm_answer = ask_accio_llm(clean_query, lang=lang)
+        if llm_answer:
+            notify(f"Answer: {llm_answer}")
+            speak(llm_answer, lang=lang)
+            return True
+    except Exception as e:
+        print(f"[Knowledge Actions] OpenRouter query error: {e}")
+
+    # 2. Resilient Offline/Local Fallback: Wikipedia Summary
+    search_term = fallback_subject.strip() if fallback_subject else clean_query
+    summary = fetch_wikipedia_summary(search_term)
+
+    # 3. Secondary Fallback: DuckDuckGo Instant Answer
     if not summary:
-        summary = fetch_duckduckgo_answer(clean_query)
+        summary = fetch_duckduckgo_answer(search_term)
 
     if summary:
         notify(f"Answer: {summary}")
@@ -118,10 +133,8 @@ def answer_knowledge_query(query: str, lang: str = 'en') -> bool:
         speak(summary, lang=lang)
         return True
     else:
-        # Graceful fallback: Open search results in browser so user is never stranded
-        notify("No instant answer found, searching web...")
-        if lang == 'hi':
-            speak(f"{clean_query} के बारे में वेब पर सर्च कर रहा हूँ", lang=lang)
-        else:
-            speak(f"I found web results for {clean_query}", lang=lang)
-        return search_web(clean_query, lang=lang)
+        # Provide direct spoken answer without popping open browser tabs
+        msg = f"{clean_query} का उत्तर नहीं मिला। गूगल पर खोजने के लिए 'सर्च करो' बोलें।" if lang == 'hi' else f"I don't have an instant answer for {clean_query}. Say 'search for {clean_query}' to look it up on Google."
+        notify(msg)
+        speak(msg, lang=lang)
+        return True

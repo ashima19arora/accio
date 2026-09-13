@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, Callable
 from .intent_parser import parse_intent, Intent
-from .feedback import speak, notify
+from .feedback import speak, notify, notify_desktop_orb
 from . import browser_actions
 from . import window_actions
 from . import system_actions
@@ -41,6 +41,27 @@ def handle_greeting(params: Dict[str, Any]) -> ActionResult:
     speak(message, lang=lang)
     notify(message)
     return ActionResult(success=True, intent="GREETING", message=message)
+
+def handle_wellbeing(params: Dict[str, Any]) -> ActionResult:
+    lang = params.get("_lang", "en")
+    message = "मैं बहुत बढ़िया हूँ, धन्यवाद! मैं आपकी क्या मदद कर सकता हूँ?" if lang == 'hi' else "I am doing well, thank you! How can I help you today?"
+    speak(message, lang=lang)
+    notify(message)
+    return ActionResult(success=True, intent="WELLBEING_QUERY", message=message)
+
+def handle_identity(params: Dict[str, Any]) -> ActionResult:
+    lang = params.get("_lang", "en")
+    message = "मैं एक्सियो हूँ, आपका वॉइस-पावर्ड डिजिटल एक्सेसिबिलिटी असिस्टेंट।" if lang == 'hi' else "I am Accio, your voice-powered digital accessibility assistant."
+    speak(message, lang=lang)
+    notify(message)
+    return ActionResult(success=True, intent="IDENTITY_QUERY", message=message)
+
+def handle_capabilities(params: Dict[str, Any]) -> ActionResult:
+    lang = params.get("_lang", "en")
+    message = "मैं ऐप्स खोल सकता हूँ, सवाल के जवाब दे सकता हूँ, फ़ॉर्म भर सकता हूँ, और विंडो कंट्रोल कर सकता हूँ।" if lang == 'hi' else "I can open apps, answer questions, fill forms, adjust volume, and navigate your system hands-free."
+    speak(message, lang=lang)
+    notify(message)
+    return ActionResult(success=True, intent="CAPABILITIES_QUERY", message=message)
 
 def handle_exit(params: Dict[str, Any]) -> ActionResult:
     from .languages import get_localized_message
@@ -79,8 +100,47 @@ def handle_compound_open_and_type(params: Dict[str, Any]) -> ActionResult:
         message=f"Opened {open_target} and typed: '{text_to_type}'"
     )
 
+def handle_screen_context_query(params: Dict[str, Any]) -> ActionResult:
+    """
+    Handles screen context inquiries by analyzing the foreground application,
+    window title, in-memory visual snapshot, and optional clipboard text.
+    """
+    lang = params.get("_lang", "en")
+    question = params.get("question", "What is on my screen?")
+
+    notify(f"Analyzing active screen context for: '{question}'")
+    notify_desktop_orb("processing", message="Reading screen...")
+
+    try:
+        from .screen_context import collect_screen_context
+        from .llm_client import ask_screen_context_llm
+
+        screen_ctx = collect_screen_context()
+        answer = ask_screen_context_llm(question, screen_ctx, lang=lang)
+
+        notify(f"Screen Insight: {answer}")
+        speak(answer, lang=lang)
+        return ActionResult(
+            success=True,
+            intent="SCREEN_CONTEXT_QUERY",
+            message=answer
+        )
+    except Exception as e:
+        err_msg = f"Screen context inspection error: {e}"
+        notify(err_msg, success=False)
+        fallback = "माफ़ कीजिये, स्क्रीन पढ़ने में समस्या आई।" if lang == 'hi' else "Sorry, I could not inspect your screen right now."
+        speak(fallback, lang=lang)
+        return ActionResult(
+            success=False,
+            intent="SCREEN_CONTEXT_QUERY",
+            message=err_msg
+        )
+
 # Dispatch table mapping intent names to executor functions
 INTENT_HANDLERS: Dict[str, Callable[[Dict[str, Any]], ActionResult]] = {
+    # Screen Lens & Context Awareness
+    "SCREEN_CONTEXT_QUERY": handle_screen_context_query,
+
     # Web & Browser
     "SEARCH_WEB": lambda p: ActionResult(
         success=browser_actions.search_web(p.get("query", ""), lang=p.get("_lang", "en")),
@@ -387,9 +447,13 @@ INTENT_HANDLERS: Dict[str, Callable[[Dict[str, Any]], ActionResult]] = {
 
     # Hands-Free Knowledge Q&A
     "KNOWLEDGE_QUERY": lambda p: ActionResult(
-        success=knowledge_actions.answer_knowledge_query(p.get("query", ""), lang=p.get("_lang", "en")),
+        success=knowledge_actions.answer_knowledge_query(
+            p.get("full_text") or p.get("query", ""),
+            lang=p.get("_lang", "en"),
+            fallback_subject=p.get("query", "")
+        ),
         intent="KNOWLEDGE_QUERY",
-        message=f"Answered knowledge query: {p.get('query', '')}"
+        message=f"Answered knowledge query: {p.get('query') or p.get('full_text', '')}"
     ),
 
     # File & Note Creation
@@ -405,6 +469,9 @@ INTENT_HANDLERS: Dict[str, Callable[[Dict[str, Any]], ActionResult]] = {
 
     # Conversation & Life-cycle
     "GREETING": handle_greeting,
+    "WELLBEING_QUERY": handle_wellbeing,
+    "IDENTITY_QUERY": handle_identity,
+    "CAPABILITIES_QUERY": handle_capabilities,
     "EXIT_ASSISTANT": handle_exit,
 }
 

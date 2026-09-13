@@ -47,7 +47,11 @@ INTENT_TIERS: Dict[str, RiskTier] = {
     "VOLUME_DOWN": RiskTier.TIER_0_SAFE,
     "VOLUME_MUTE": RiskTier.TIER_0_SAFE,
     "GREETING": RiskTier.TIER_0_SAFE,
+    "WELLBEING_QUERY": RiskTier.TIER_0_SAFE,
+    "IDENTITY_QUERY": RiskTier.TIER_0_SAFE,
+    "CAPABILITIES_QUERY": RiskTier.TIER_0_SAFE,
     "KNOWLEDGE_QUERY": RiskTier.TIER_0_SAFE,
+    "SCREEN_CONTEXT_QUERY": RiskTier.TIER_0_SAFE,
 
     # Tier 1: Standard Navigation & Controls
     "SEARCH_WEB": RiskTier.TIER_1_STANDARD,

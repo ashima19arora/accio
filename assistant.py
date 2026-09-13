@@ -53,6 +53,8 @@ def run_assistant():
     try:
         model = onnx_asr.load_model("nemo-parakeet-tdt-0.6b-v2", quantization="int8")
         print("Model loaded successfully.")
+        # Start local voice bridge daemon on port 48124 for Electron desktop overlay
+        actions.start_voice_bridge(model=model, port=48124, daemon=True)
     except Exception as e:
         print(f"Error loading model: {e}")
         return
@@ -77,12 +79,14 @@ def run_assistant():
     print("  - 'search for SpaceX' / 'open YouTube' / 'open WhatsApp web'")
     print("  - 'how much RAM is occupied' / 'check battery'")
     print("  - 'volume up' / 'volume down' / 'mute' / 'take screenshot'")
+    print("  - Hands-Free: Wake with 'Hey let\'s start' / 'Activate' and conclude with 'Execute'")
     print("  - 'exit' or 'goodbye' to quit\n")
 
     INACTIVITY_SLEEP_TIMEOUT = 45.0  # seconds of silence before entering sleep mode
     is_sleeping = False
     last_active_time = time.time()
     current_lang = 'en'
+    prev_prompt_state = None
 
     try:
         with sr.Microphone(sample_rate=16000) as source:
@@ -103,27 +107,38 @@ def run_assistant():
                     if not is_sleeping and (time.time() - last_active_time > INACTIVITY_SLEEP_TIMEOUT):
                         is_sleeping = True
                         print("\n\033[94m[Accio State] Inactivity detected. Entering Sleep Mode...\033[0m")
-                        sleep_msg = "स्लीप मोड में जा रहा हूँ। मुझे जगाने के लिए 'hey', 'wake up', या 'start' बोलें।" if current_lang == 'hi' else "Going to sleep mode. Say 'Hey', 'Wake up', or 'Start' to wake me up."
+                        sleep_msg = "स्लीप मोड में जा रहा हूँ। मुझे जगाने के लिए 'hey', 'start', या 'activate' बोलें।" if current_lang == 'hi' else "Going to sleep mode. Say 'Hey let\'s start', 'Activate', or 'Accio' to wake me up."
                         actions.speak(sleep_msg, lang=current_lang)
                         actions.wait_until_speech_finishes()
-                        print("\033[94m[Accio Asleep - Listening for wake word: 'Hey', 'Wake up', 'Start', or 'Accio']\033[0m\n")
+                        print("\033[94m[Accio Asleep - Listening for wake phrase: 'Hey let\'s start', 'Start', 'Begin', 'Activate', or 'Accio']\033[0m\n")
 
-                    status_prompt = "\033[94m[Accio Asleep (Say 'Hey', 'Wake up', or 'Start')...]\033[0m" if is_sleeping else "\033[90m[Listening...]\033[0m"
-                    print(status_prompt, end="\r", flush=True)
+                    current_prompt_state = "asleep" if is_sleeping else "listening"
+                    if current_prompt_state != prev_prompt_state:
+                        if is_sleeping:
+                            print("\033[94m[Accio Asleep] (Say 'Hey let\'s start', 'Start', or 'Activate')...\033[0m", flush=True)
+                        else:
+                            print("\033[90m[Accio Listening...] Speak anytime\033[0m", flush=True)
+                        prev_prompt_state = current_prompt_state
+
+                    if not is_sleeping:
+                        actions.notify_desktop_orb("listening")
 
                     # Listen with 5s timeout to periodically refresh sleep-timer
                     audio = recognizer.listen(source, timeout=5.0, phrase_time_limit=25)
-                    print("                                                         \r", end="")
 
                     # Audio conversion to float32 numpy array
                     audio_data = audio.get_wav_data()
                     audio_np, sample_rate = sf.read(io.BytesIO(audio_data))
                     audio_np = audio_np.astype(np.float32)
 
+                    actions.notify_desktop_orb("processing")
+
                     # Speech Recognition via Parakeet
                     text = model.recognize(audio_np, sample_rate=sample_rate).strip()
 
                     if not text:
+                        if not is_sleeping:
+                            actions.notify_desktop_orb("idle")
                         continue
 
                     detected_lang = detect_language(text)
@@ -133,12 +148,14 @@ def run_assistant():
                     if is_sleeping:
                         WAKE_WORDS_PATTERN = (
                             r'\b(?:'
-                            r'hey(?:\s+there)?|'
+                            r'hey\s+let\'?s\s+start|let\'?s\s+start|let\s+us\s+start|'
+                            r'start(?:\s+(?:assistant|listening|up|accio))?|'
+                            r'begin(?:\s+(?:assistant|listening|up|accio))?|let\'?s\s+begin|'
+                            r'activate(?:\s+(?:accio|orb|assistant|listening))?|hey\s+activate|'
+                            r'hey(?:\s+there)?|hello|hi|'
                             r'wake\s*up(?:\s+(?:up|wake\s*up|now|please))?|'
-                            r'start(?:\s+(?:assistant|listening|up))?|'
-                            r'hello|hi|'
                             r'accio|akio|echo|hey\s+accio|ok\s+accio|'
-                            r'jag\s*jao|suno|shuru\s*karo|uth\s*jao'
+                            r'jag\s*jao|suno|shuru\s*karo|chalu\s*karo|uth\s*jao'
                             r')\b'
                         )
                         wake_match = re.search(WAKE_WORDS_PATTERN, text, re.IGNORECASE)
@@ -155,14 +172,17 @@ def run_assistant():
                             last_active_time = time.time()
                             print(f"\n\033[92m[Accio Woke Up!]\033[0m (Heard: '{text}')")
 
-                            # Check if a command was appended after wake word (e.g., "Wake up open youtube")
+                            # Check if a command was appended after wake word (e.g., "Wake up open youtube execute")
                             WAKE_PREFIX_STRIP = (
                                 r'^(?:'
+                                r'hey\s+let\'?s\s+start|let\'?s\s+start|let\s+us\s+start|'
+                                r'start(?:\s+(?:assistant|listening|up|accio))?|'
+                                r'begin(?:\s+(?:assistant|listening|up|accio))?|let\'?s\s+begin|'
+                                r'activate(?:\s+(?:accio|orb|assistant|listening))?|hey\s+activate|'
                                 r'hey\s+accio|ok\s+accio|hello\s+accio|accio|akio|echo|'
                                 r'wake\s*up(?:\s+(?:up|wake\s*up|now|please))?|'
-                                r'start(?:\s+(?:assistant|listening|up))?|'
                                 r'hey(?:\s+there)?|hello|hi|'
-                                r'jag\s*jao|suno|shuru\s*karo|uth\s*jao'
+                                r'jag\s*jao|suno|shuru\s*karo|chalu\s*karo|uth\s*jao'
                                 r')\b[,\s]*'
                             )
                             command_after = text.strip()
@@ -187,6 +207,11 @@ def run_assistant():
                     # Active Mode: Reset inactivity timer
                     last_active_time = time.time()
                     print(f"\n\033[93m[Transcribed]\033[0m \"{text}\"")
+                    # Send live transcription to the desktop orb so the orb UI reflects the user's voice
+                    actions.notify_desktop_orb("transcribed", text=text)
+
+                    if re.search(r'\b(?:execute|done|finish|run\s*it|execute\s+karo)\b', text, re.I):
+                        print("\033[95m[Accio Delimiter Detected]\033[0m 'Execute' keyword recognized -> firing action immediately!")
                     print(f"\033[96m[Accio Analyzing]\033[0m Understanding command and validating action...")
                     time.sleep(0.2)
 
@@ -200,11 +225,13 @@ def run_assistant():
                     # Wait for action's feedback audio to complete before giving the turn-taking cue
                     actions.wait_until_speech_finishes()
 
-                    # Clear Turn-Taking Readiness Cue
-                    ready_cue = "मैं अगले सवाल के लिए तैयार हूँ।" if current_lang == 'hi' else "Hey, I am ready for the next query."
+                    # Clear Turn-Taking Readiness Cue: Always clearly speak and show "Ready for next."
+                    ready_cue = "अगले सवाल के लिए तैयार हूँ।" if current_lang == 'hi' else "Ready for next."
+                    actions.notify_desktop_orb("ready_for_next", message="Ready for next")
                     actions.speak(ready_cue, lang=current_lang)
                     print(f"\033[92m[Accio Turn-Taking]\033[0m {ready_cue}")
                     actions.wait_until_speech_finishes()
+                    actions.notify_desktop_orb("ready_for_next", message="Ready for next")
                     print("-" * 50)
 
                 except sr.WaitTimeoutError:

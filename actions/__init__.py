@@ -16,13 +16,15 @@ GREAT TECH & PACKAGES USED ACROSS THIS PACKAGE:
 
 from .registry import execute_command, ActionResult, INTENT_HANDLERS
 from .intent_parser import parse_intent, Intent
-from .feedback import speak, notify, wait_until_speech_finishes, is_speaking
+from .feedback import speak, notify, wait_until_speech_finishes, is_speaking, notify_desktop_orb
+from .voice_bridge import start_voice_bridge
 from . import browser_actions
 from . import window_actions
 from . import system_actions
 from . import form_actions
 from . import knowledge_actions
 from . import file_actions
+from . import voice_bridge
 
 __all__ = [
     "execute_command",
@@ -33,6 +35,9 @@ __all__ = [
     "notify",
     "wait_until_speech_finishes",
     "is_speaking",
+    "notify_desktop_orb",
+    "start_voice_bridge",
+    "voice_bridge",
     "browser_actions",
     "window_actions",
     "system_actions",

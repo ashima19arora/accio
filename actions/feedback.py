@@ -138,6 +138,25 @@ def wait_until_speech_finishes(timeout: float = 8.0) -> None:
     # Brief buffer for acoustic room echo decay
     time.sleep(0.15)
 
+import urllib.request
+import urllib.parse
+
+def notify_desktop_orb(state: str, text: str = "", message: str = ""):
+    """Notify the floating desktop orb of voice activity, live transcription, and conversational feedback."""
+    try:
+        params = urllib.parse.urlencode({
+            "state": state,
+            "text": text[:100] if text else "",
+            "message": message[:100] if message else "",
+        })
+        req = urllib.request.Request(
+            f"http://127.0.0.1:48123/state?{params}",
+            headers={"User-Agent": "AccioVoice/1.0"}
+        )
+        urllib.request.urlopen(req, timeout=0.15)
+    except Exception:
+        pass
+
 def speak(text: str, lang: str = 'auto', asynchronous: bool = True):
     """
     Speaks the given text in English or Hindi based on language detection or parameter.
@@ -160,6 +179,7 @@ def speak(text: str, lang: str = 'auto', asynchronous: bool = True):
 
     def _run():
         _speaking_active.set()
+        notify_desktop_orb("speaking", message=clean_spoken)
         try:
             with _tts_lock:
                 # 1. For Hindi, use gTTS for authentic native Hindi pronunciation
@@ -178,6 +198,7 @@ def speak(text: str, lang: str = 'auto', asynchronous: bool = True):
                     pass
         finally:
             _speaking_active.clear()
+            notify_desktop_orb("idle")
 
     if asynchronous:
         t = threading.Thread(target=_run, daemon=True)

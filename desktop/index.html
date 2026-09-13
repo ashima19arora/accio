@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accio Persistent Desktop Orb</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="aurora">
+  <div class="overlay-container" id="overlayContainer">
+    <!-- Ambient Breathing Cosmic Halo Rings -->
+    <div class="halo-ring halo-ring-outer"></div>
+    <div class="halo-ring halo-ring-inner"></div>
+
+    <!-- Core Interactive Cyber Orb -->
+    <div class="accio-orb" id="accioOrb" role="button" aria-label="Accio Desktop Orb" tabindex="0">
+      <!-- Living Aurora Cosmic Plasma Nebula -->
+      <div class="aurora-plasma"></div>
+
+      <!-- 3D Convex Optical Glass Reflection -->
+      <div class="specular-dome"></div>
+
+      <!-- Subtle Acoustic Soundwave Audio Horizon -->
+      <svg class="waveform-svg" viewBox="0 0 54 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M 1 9 L 8 9 Q 10 3 12 9 Q 14 15 16 9 L 20 9 M 34 9 L 38 9 Q 40 3 42 9 Q 44 15 46 9 L 53 9"
+          stroke="var(--accent-glow)"
+          stroke-width="1.2"
+          stroke-linecap="round"
+          opacity="0.65"
+        />
+        <line x1="5" y1="7.5" x2="5" y2="10.5" stroke="var(--accent-glow)" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+        <line x1="7" y1="6" x2="7" y2="12" stroke="var(--accent-glow)" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+        <line x1="47" y1="6" x2="47" y2="12" stroke="var(--accent-glow)" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+        <line x1="49" y1="7.5" x2="49" y2="10.5" stroke="var(--accent-glow)" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+      </svg>
+
+      <!-- Center Architectural Monogram "A" with Bevel & Electric Core -->
+      <svg class="emblem-svg" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- Outer Titanium Bevel Gradient -->
+          <linearGradient id="chassisGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="var(--chassis-top)" />
+            <stop offset="42%" stop-color="var(--chassis-mid)" />
+            <stop offset="100%" stop-color="var(--chassis-bot)" />
+          </linearGradient>
+
+          <!-- Core Electric Neon Inlay Gradient -->
+          <linearGradient id="neonCoreGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent-neon-1)" />
+            <stop offset="50%" stop-color="var(--accent-neon-2)" />
+            <stop offset="100%" stop-color="var(--accent-neon-3)" />
+          </linearGradient>
+
+          <!-- Multi-tier Drop Shadow for Floating Depth -->
+          <filter id="emblemGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.9" />
+            <feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="var(--accent-glow)" flood-opacity="0.65" />
+          </filter>
+        </defs>
+
+        <g filter="url(#emblemGlow)">
+          <!-- Outer Titanium Architectural Silhouette -->
+          <path
+            d="M 22 5.5
+               L 34 35
+               L 28.5 35
+               L 25.2 27
+               L 18.8 27
+               L 15.5 35
+               L 10 35
+               Z"
+            fill="url(#chassisGrad)"
+          />
+
+          <!-- Inner Triangular Counter Cutout -->
+          <path
+            d="M 22 12.5
+               L 24.3 22.8
+               L 19.7 22.8
+               Z"
+            fill="var(--cutout-fill)"
+          />
+
+          <!-- Luminous Electric Inlay Stroke -->
+          <path
+            d="M 22 8.5
+               L 32 33
+               M 22 8.5
+               L 12 33
+               M 17 24.8
+               L 27 24.8"
+            stroke="url(#neonCoreGrad)"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+
+          <!-- Apex Specular Jewel Node -->
+          <circle cx="22" cy="6" r="1.5" fill="#ffffff" filter="drop-shadow(0 0 3px var(--accent-glow))" />
+          <circle cx="22" cy="6" r="0.7" fill="var(--accent-neon-2)" />
+        </g>
+      </svg>
+
+      <!-- Click Ripple Effect Container -->
+      <div class="ripple-element" id="rippleElement"></div>
+    </div>
+
+    <!-- Micro Floating Status Pill (Always visible & dynamic) -->
+    <div class="status-pill" id="statusPill">Accio • Ready for next</div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -217,6 +217,9 @@ class TestAccioActions(unittest.TestCase):
         self.assertEqual(parse_intent("wake up up").name, "GREETING")
         self.assertEqual(parse_intent("start").name, "GREETING")
         self.assertEqual(parse_intent("hello").name, "GREETING")
+        self.assertEqual(parse_intent("hey lets start").name, "GREETING")
+        self.assertEqual(parse_intent("activate").name, "GREETING")
+        self.assertEqual(parse_intent("begin").name, "GREETING")
 
         # Wake phrases chained with commands
         intent1 = parse_intent("hey open youtube")
@@ -234,14 +237,56 @@ class TestAccioActions(unittest.TestCase):
         self.assertEqual(intent4.name, "OPEN_APP")
         self.assertEqual(intent4.params.get("app_name").lower(), "notepad")
 
+        intent5 = parse_intent("hey lets start open notepad")
+        self.assertEqual(intent5.name, "OPEN_APP")
+        self.assertEqual(intent5.params.get("app_name").lower(), "notepad")
+
+        intent6 = parse_intent("activate volume up")
+        self.assertEqual(intent6.name, "VOLUME_UP")
+
+        intent7 = parse_intent("begin scroll down")
+        self.assertEqual(intent7.name, "BROWSER_SCROLL_DOWN")
+
+    def test_execute_delimiter(self):
+        # Trailing 'execute' delimiters
+        intent1 = parse_intent("open notepad execute")
+        self.assertEqual(intent1.name, "OPEN_APP")
+        self.assertEqual(intent1.params.get("app_name").lower(), "notepad")
+
+        intent2 = parse_intent("volume up please execute")
+        self.assertEqual(intent2.name, "VOLUME_UP")
+
+        intent3 = parse_intent("scroll down execute")
+        self.assertEqual(intent3.name, "BROWSER_SCROLL_DOWN")
+
+        # Full hands-free: wake phrase + command + execute delimiter
+        intent4 = parse_intent("hey lets start open notepad execute")
+        self.assertEqual(intent4.name, "OPEN_APP")
+        self.assertEqual(intent4.params.get("app_name").lower(), "notepad")
+
+        intent5 = parse_intent("activate volume up execute")
+        self.assertEqual(intent5.name, "VOLUME_UP")
+
+        intent6 = parse_intent("begin search for SpaceX execute")
+        self.assertEqual(intent6.name, "SEARCH_WEB")
+        self.assertEqual(intent6.params.get("query").lower(), "spacex")
+
     def test_unknown_or_search_fallback(self):
         # Short gibberish
         intent1 = parse_intent("xyz")
         self.assertEqual(intent1.name, "UNKNOWN")
 
-        # Descriptive multi-word query fallback to search
+        # Descriptive multi-word informational query routes to KNOWLEDGE_QUERY for direct spoken answers
         intent2 = parse_intent("compare quantum computing and classical computers")
-        self.assertEqual(intent2.name, "SEARCH_WEB")
+        self.assertEqual(intent2.name, "KNOWLEDGE_QUERY")
+
+        # Conversational questions route to dedicated conversational or knowledge handlers
+        intent3 = parse_intent("Hello, how are you?")
+        self.assertEqual(intent3.name, "WELLBEING_QUERY")
+
+        # Explicit search only when search/google keyword is provided
+        intent4 = parse_intent("search for quantum computing")
+        self.assertEqual(intent4.name, "SEARCH_WEB")
 
 if __name__ == "__main__":
     unittest.main()

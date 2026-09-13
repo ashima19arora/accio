@@ -5,6 +5,10 @@ Just as Braille revolutionized access to physical text, Accio provides a voice-f
 
 ---
 
+> 📖 **Comprehensive Guide & Feature Directory**: For full step-by-step instructions, voice command tables, floating orb controls, and architecture documentation, read the [USAGE_AND_FEATURES.md](USAGE_AND_FEATURES.md) guide!
+
+---
+
 ## 🌟 Key Capabilities
 
 ### 1. Hands-Free Form Filling & Accessibility Navigation
@@ -71,8 +75,26 @@ pip install -r requirements.txt
 ```
 
 ### Running Accio
+
+#### ⚡ Start Core System (Web, API & Desktop Orb)
+Run the web application, backend API, and persistent Electron floating desktop orb together:
 ```bash
-python assistant.py
+npm run dev
+```
+
+#### 🎙️ Voice Assistant Engine
+Run the hands-free offline neural voice operating runtime in its dedicated terminal:
+```bash
+npm run voice
+# or: python assistant.py
+```
+
+#### 🎯 Additional Commands
+```bash
+npm run dev:all      # Starts all 4 services concurrently (Web, API, Desktop Orb, Voice)
+npm run dev:web      # Starts Express API & React Web Client only
+npm run dev:desktop  # Launches Persistent Electron Floating Desktop Orb only
+npm run test         # Runs full 28-case Unit & Security Test Suite
 ```
 
 ### Running Unit & Security Tests

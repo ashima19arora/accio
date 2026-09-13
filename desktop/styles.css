@@ -1,0 +1,453 @@
+/* ==========================================================================
+   Accio Persistent Desktop Orb - Visual Design System
+   Clean Matte Obsidian (Resting) + Dynamic Voice Glow (Active)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Theme Presets
+   -------------------------------------------------------------------------- */
+
+/* 1. Theme: Cosmic Aurora (Default: Deep Space Indigo, Electric Cyan & Violet) */
+:root,
+body[data-theme="aurora"] {
+  --orb-size: 58px;
+  --bg-core-1: #1e1b4b;
+  --bg-core-2: #0f172a;
+  --bg-core-3: #020617;
+  --plasma-1: rgba(56, 189, 248, 0.45);
+  --plasma-2: rgba(192, 132, 252, 0.42);
+  --plasma-3: rgba(99, 102, 241, 0.35);
+  --bezel-ring: rgba(56, 189, 248, 0.55);
+  --halo-glow: rgba(56, 189, 248, 0.35);
+  --halo-border-1: rgba(99, 102, 241, 0.3);
+  --halo-border-2: rgba(192, 132, 252, 0.25);
+  --accent-glow: #38bdf8;
+  --accent-neon-1: #f0f9ff;
+  --accent-neon-2: #38bdf8;
+  --accent-neon-3: #818cf8;
+  --chassis-top: #ffffff;
+  --chassis-mid: #cbd5e1;
+  --chassis-bot: #475569;
+  --cutout-fill: #060913;
+  --status-bg: rgba(15, 23, 42, 0.94);
+  --status-border: rgba(56, 189, 248, 0.4);
+  --status-text: #e0f2fe;
+}
+
+/* 2. Theme: Solar Eclipse (Executive Luxury: Jet Black, Champagne Gold & Amber) */
+body[data-theme="solar"] {
+  --orb-size: 58px;
+  --bg-core-1: #451a03;
+  --bg-core-2: #1c1917;
+  --bg-core-3: #0a0a0a;
+  --plasma-1: rgba(251, 191, 36, 0.45);
+  --plasma-2: rgba(249, 115, 22, 0.38);
+  --plasma-3: rgba(245, 158, 11, 0.32);
+  --bezel-ring: rgba(251, 191, 36, 0.6);
+  --halo-glow: rgba(251, 191, 36, 0.35);
+  --halo-border-1: rgba(245, 158, 11, 0.3);
+  --halo-border-2: rgba(251, 146, 60, 0.25);
+  --accent-glow: #fbbf24;
+  --accent-neon-1: #fffbeb;
+  --accent-neon-2: #fbbf24;
+  --accent-neon-3: #f59e0b;
+  --chassis-top: #ffffff;
+  --chassis-mid: #fde68a;
+  --chassis-bot: #78350f;
+  --cutout-fill: #140e08;
+  --status-bg: rgba(28, 25, 23, 0.94);
+  --status-border: rgba(251, 191, 36, 0.4);
+  --status-text: #fef3c7;
+}
+
+/* 3. Theme: Emerald Nebula (Midnight Obsidian, Bioluminescent Mint & Jade) */
+body[data-theme="emerald"] {
+  --orb-size: 58px;
+  --bg-core-1: #064e3b;
+  --bg-core-2: #06281c;
+  --bg-core-3: #02120b;
+  --plasma-1: rgba(52, 211, 153, 0.45);
+  --plasma-2: rgba(16, 185, 129, 0.38);
+  --plasma-3: rgba(5, 150, 105, 0.32);
+  --bezel-ring: rgba(52, 211, 153, 0.55);
+  --halo-glow: rgba(52, 211, 153, 0.35);
+  --halo-border-1: rgba(52, 211, 153, 0.3);
+  --halo-border-2: rgba(16, 185, 129, 0.25);
+  --accent-glow: #34d399;
+  --accent-neon-1: #ecfdf5;
+  --accent-neon-2: #34d399;
+  --accent-neon-3: #10b981;
+  --chassis-top: #f0fdf4;
+  --chassis-mid: #a7f3d0;
+  --chassis-bot: #065f46;
+  --cutout-fill: #04140d;
+  --status-bg: rgba(6, 40, 28, 0.94);
+  --status-border: rgba(52, 211, 153, 0.4);
+  --status-text: #ecfdf5;
+}
+
+/* --------------------------------------------------------------------------
+   Reset & Container Layout
+   -------------------------------------------------------------------------- */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 260px;
+  height: 130px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.overlay-container {
+  position: relative;
+  width: 260px;
+  height: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 10px;
+  background: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   1. Dynamic Voice Halo Rings (HIDDEN When Idle, GLOWS When Speaking/Listening)
+   -------------------------------------------------------------------------- */
+
+.halo-ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0; /* Zero glow at rest */
+  left: 50%;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: none;
+}
+
+.halo-ring-outer {
+  top: 0px;
+  width: 78px;
+  height: 78px;
+  transform: translateX(-50%) scale(0.92);
+}
+
+.halo-ring-inner {
+  top: 5px;
+  width: 68px;
+  height: 68px;
+  transform: translateX(-50%) scale(0.92);
+}
+
+/* Awakening Glow on Voice Interaction or Click */
+.overlay-container.is-listening .halo-ring-outer,
+.overlay-container.is-speaking .halo-ring-outer,
+.overlay-container.is-processing .halo-ring-outer {
+  opacity: 0.85;
+  transform: translateX(-50%) scale(1);
+  border: 1px solid var(--halo-border-1);
+  box-shadow: 0 0 14px var(--halo-glow);
+  animation: cosmicAuraPulse 2.8s ease-in-out infinite;
+}
+
+.overlay-container.is-listening .halo-ring-inner,
+.overlay-container.is-speaking .halo-ring-inner,
+.overlay-container.is-processing .halo-ring-inner {
+  opacity: 0.75;
+  transform: translateX(-50%) scale(1);
+  border: 1px solid var(--halo-border-2);
+  animation: cosmicAuraPulseInner 2.8s ease-in-out infinite 0.5s;
+}
+
+@keyframes cosmicAuraPulse {
+  0%, 100% {
+    transform: translateX(-50%) scale(0.97);
+    opacity: 0.4;
+    box-shadow: 0 0 8px var(--halo-glow);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.04);
+    opacity: 0.85;
+    box-shadow: 0 0 18px var(--accent-glow);
+  }
+}
+
+@keyframes cosmicAuraPulseInner {
+  0%, 100% {
+    transform: translateX(-50%) scale(0.98);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateX(-50%) scale(1.03);
+    opacity: 0.8;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. Core Jewel Orb - Clean Matte Chassis (Rest) vs Glowing Voice Aura (Active)
+   -------------------------------------------------------------------------- */
+
+.accio-orb {
+  position: relative;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 26%, var(--bg-core-1) 0%, var(--bg-core-2) 52%, var(--bg-core-3) 100%);
+  border: 1.2px solid rgba(255, 255, 255, 0.2); /* Clean, subtle border at rest */
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.75),
+    inset 0 1.2px 1.8px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s ease,
+              border-color 0.4s ease;
+  overflow: hidden;
+  z-index: 10;
+}
+
+/* Hover State */
+.accio-orb:hover {
+  transform: scale(1.04);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.8),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.8);
+}
+
+/* Grabbing / Dragging State */
+.accio-orb.is-dragging {
+  cursor: grabbing !important;
+  transform: scale(1.06);
+  border-color: var(--accent-glow);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.85),
+    inset 0 1.5px 3px rgba(255, 255, 255, 0.8);
+}
+
+/* Active / Click Compression */
+.accio-orb.is-active,
+.accio-orb:active {
+  transform: scale(0.95);
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.7);
+}
+
+/* Dynamic Voice Responsive Glow (ONLY Active When Speaking or Listening) */
+.overlay-container.is-listening .accio-orb,
+.overlay-container.is-speaking .accio-orb,
+.overlay-container.is-processing .accio-orb {
+  border-color: var(--accent-glow);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.82),
+    0 0 26px var(--accent-glow),
+    inset 0 1.5px 3px rgba(255, 255, 255, 0.85),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.75);
+}
+
+/* Visibility Entrance Animation */
+@keyframes orbEntrance {
+  0% {
+    transform: scale(0.65);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.accio-orb.anim-entrance {
+  animation: orbEntrance 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --------------------------------------------------------------------------
+   3. Living Aurora Plasma Layer (Calm at Rest, Vivid When Active)
+   -------------------------------------------------------------------------- */
+
+.aurora-plasma {
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 68% 30%, var(--plasma-1) 0%, transparent 60%),
+    radial-gradient(circle at 30% 70%, var(--plasma-2) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, var(--plasma-3) 0%, transparent 70%);
+  filter: blur(5px);
+  pointer-events: none;
+  opacity: 0.35; /* Subdued at rest */
+  transition: opacity 0.5s ease;
+}
+
+.overlay-container.is-listening .aurora-plasma,
+.overlay-container.is-speaking .aurora-plasma,
+.overlay-container.is-processing .aurora-plasma {
+  opacity: 0.95;
+  animation: auroraDrift 6s ease-in-out infinite alternate;
+}
+
+@keyframes auroraDrift {
+  0% {
+    transform: rotate(0deg) scale(0.95);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.04);
+  }
+  100% {
+    transform: rotate(360deg) scale(0.95);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. Specular Optical Glass Dome
+   -------------------------------------------------------------------------- */
+
+.specular-dome {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48%;
+  border-radius: 50% 50% 42% 42% / 100% 100% 20% 20%;
+  background: radial-gradient(ellipse at 50% 12%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.08) 50%, transparent 80%);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* --------------------------------------------------------------------------
+   5. Horizontal Soundwave Horizon (Vibrates on Speech)
+   -------------------------------------------------------------------------- */
+
+.waveform-svg {
+  position: absolute;
+  width: 52px;
+  height: 18px;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0.25; /* Quiet at rest */
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
+.overlay-container.is-speaking .waveform-svg,
+.overlay-container.is-listening .waveform-svg {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px var(--accent-glow));
+  animation: waveformPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes waveformPulse {
+  0% {
+    transform: scaleY(0.85);
+  }
+  100% {
+    transform: scaleY(1.15);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. Architectural Monogram "A" Vector Emblem
+   -------------------------------------------------------------------------- */
+
+.emblem-svg {
+  width: 32px;
+  height: 32px;
+  z-index: 6;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), filter 0.25s ease;
+}
+
+.overlay-container.is-speaking .emblem-svg,
+.overlay-container.is-listening .emblem-svg,
+.accio-orb:hover .emblem-svg {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.accio-orb.is-dragging .emblem-svg {
+  transform: scale(1.03);
+}
+
+/* --------------------------------------------------------------------------
+   7. Tactile Click Ripple Shockwave
+   -------------------------------------------------------------------------- */
+
+.ripple-element {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1);
+  z-index: 7;
+}
+
+.ripple-element.animate {
+  animation: rippleExpand 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes rippleExpand {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(8);
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. Frosted Status Tooltip Pill (Always Visible & Beautifully Centered)
+   -------------------------------------------------------------------------- */
+
+.status-pill {
+  position: relative;
+  margin-top: 14px;
+  padding: 4px 14px;
+  border-radius: 12px;
+  background: var(--status-bg);
+  border: 1px solid var(--status-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--status-text);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0.88;
+  transform: translateY(0);
+  transition: opacity 0.22s ease, transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 8px rgba(56, 189, 248, 0.15);
+  z-index: 20;
+}
+
+.overlay-container:hover .status-pill,
+.overlay-container.is-listening .status-pill,
+.overlay-container.is-speaking .status-pill,
+.overlay-container.is-processing .status-pill {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.75), 0 0 12px var(--bezel-ring);
+  border-color: var(--accent-glow);
+}
