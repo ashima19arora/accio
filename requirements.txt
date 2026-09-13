@@ -1,6 +1,9 @@
 # Core Speech & Audio
 SpeechRecognition>=3.14.0
 PyAudio>=0.2.14
+onnx-asr>=0.12.0
+soundfile>=0.13.0
+numpy>=2.0.0
 pyttsx3>=2.90
 pygame>=2.6.0
 gTTS>=2.5.0
@@ -8,7 +11,9 @@ gTTS>=2.5.0
 # Desktop Automation & Control (Jarvis-like capabilities)
 pyautogui>=0.9.54
 pyperclip>=1.9.0
+psutil>=5.9.0
 
 # Utilities
 requests>=2.30.0
 python-dotenv>=1.0.0
+

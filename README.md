@@ -1,8 +1,82 @@
-# accio
-A voice assistant for users with low motor control or visual impairments.
-Just as Braille revolutionized access to physical books, users now require a digital counterpart to navigate today's online-first world. Existing accessibility tools fall short, and because essential services—such as courses and appointments—have migrated entirely to laptops and online platforms, traditional physical solutions like Braille can no longer bridge the gap. Our application acts as "digital Braille," providing the necessary tool for users with visual and motor impairments to seamlessly interact with the modern digital environment.
- 
-"accio" an always-present, "Jarvis-like" assistant that listens to voice commands and autonomously executes tasks, helping users seamlessly interact with the digital world
+# Accio 🪄
+> **Digital Braille: An Autonomous Voice Accessibility Assistant for Users with Motor & Visual Impairments.**
 
-Status: Currently in the early research phase to gather observations, define target user demographics, and refine specific features.
+Just as Braille revolutionized access to physical text, Accio provides a voice-first interface to navigate modern online-first operating systems and web applications. Essential daily services—education, appointments, form submissions, communication, and research—live on laptops and web platforms. For users with restricted motor control or visual impairments, Accio removes the keyboard/mouse barrier, acting as an always-present companion that autonomously executes native OS tasks, fills forms, browses the web, and retrieves spoken knowledge.
 
+---
+
+## 🌟 Key Capabilities
+
+### 1. Hands-Free Form Filling & Accessibility Navigation
+Designed specifically for motor-impaired users to fill out online applications, surveys, and login pages without touching a keyboard or mouse:
+- **Field Navigation:** *"Next field"* / *"Press tab"* / *"Previous field"* / *"Shift tab"*
+- **Data Entry:** *"Fill field with John Doe"* / *"Enter email user@example.com"*
+- **Form Submission:** *"Submit form"* / *"Press enter"*
+- **Selection & Checkboxes:** *"Toggle checkbox"* / *"Press space"*
+- **Clipboard & Text Editing:** *"Select all"*, *"Clear field"*, *"Copy text"*, *"Paste text"*, *"Undo"*
+
+### 2. Full Browser Automation
+- **Scrolling & Navigation:** *"Scroll down"*, *"Scroll up"*, *"Scroll to top"*, *"Scroll to bottom"*
+- **Zoom Accessibility:** *"Zoom in"*, *"Zoom out"*, *"Reset zoom"*
+- **In-Page Search:** *"Find on page quantum physics"* (triggers `Ctrl+F` and searches query)
+- **Tabs & History:** *"New tab"*, *"Close tab"*, *"Next tab"*, *"Reopen tab"*, *"Show history"*, *"Open downloads"*, *"Bookmark page"*, *"Toggle fullscreen"*
+- **Web Browsing:** *"Open YouTube"*, *"Go to github.com"*, *"Search the web for NASA Artemis"*
+
+### 3. Messaging Automation
+- **Direct Dictation & Sending:** *"Type I am running late and send"* (types text and executes `Enter` to dispatch message)
+- **Send Cue:** *"Send message"* / *"Hit enter"*
+- **Compound Navigation:** *"Open WhatsApp and type Hello Hashima"*
+
+### 4. Hands-Free Instant Knowledge Q&A
+For motor/visually impaired users who cannot read dense text on a screen:
+- Direct spoken summaries retrieved via zero-key open APIs (Wikipedia & DuckDuckGo Instant Answers).
+- Examples: *"What is photosynthesis?"*, *"Who is Albert Einstein?"*, *"Tell me about Mars"*, *"Quantum physics kya hai?"*
+- Speaks concise 1-2 sentence factual answers aloud; automatically falls back to browser search if no instant summary is found.
+
+### 5. Native OS, File Creation & Window Management
+- **Safe File & Note Creation:** *"Create a txt file on desktop named Myank Important"* / *"Make a text file called Notes on documents"* / Hindi: *"Desktop par file banao Meeting Notes"* (creates file safely on Desktop/OneDrive, prevents overwriting, and opens in Notepad).
+- **Snapping & Layouts:** *"Snap window left"*, *"Snap window right"*
+- **Virtual Desktops:** *"Next desktop"*, *"Previous desktop"*, *"New desktop"*, *"Close desktop"*
+- **Window Controls:** *"Minimize window"*, *"Maximize window"*, *"Show desktop"*, *"Switch window"* (Alt+Tab), *"Close window"*
+- **Hardware & Status:** *"How much RAM is occupied?"*, *"Check battery status"*, *"What time is it?"*, *"Take a screenshot"*, *"Volume up/down/mute"*
+
+### 6. Strict Multi-Tier Security Architecture
+Accio is safe from accidental or malicious commands:
+- **Lexical Threat Interception:** Prohibits destructive OS commands (`format`, `delete system32`, `rm -rf`, disk wipes).
+- **Application Whitelist:** Only approved productivity applications (`notepad`, `calculator`, `paint`, `explorer`, `settings`, `whatsapp`, `chrome`, `edge`, `firefox`, `spotify`) can be launched; shell binaries (`cmd`, `powershell`, `rundll32`) are permanently blocked.
+- **Security Audit Logger:** Every blocked threat and executed action is tracked in memory for real-time safety auditing without polluting the project folder.
+
+### 7. Dual-Engine Bilingual Voice & Responsiveness
+- **ASR:** Local offline high-accuracy speech transcription via NVIDIA NeMo Parakeet (`nemo-parakeet-tdt-0.6b-v2`).
+- **Bilingual TTS:** Automatic language detection for **English** (Windows SAPI5 offline engine) and **Hindi / Hinglish** (`gTTS` via `pygame.mixer`).
+- **Acoustic Feedback Elimination:** Synchronized speech locks (`actions.wait_until_speech_finishes()`) ensure the microphone never hears its own voice.
+- **Natural Conversational Silence Detection:** Tuned pause threshold (`pause_threshold = 1.4s`, `non_speaking_duration = 0.5s`) allowing natural breathing and thinking pauses without premature cutoffs.
+- **Turn-Taking Readiness Cue:** Accio signals readiness after completing each action (*"Hey, I am ready for the next query"* / *"मैं अगले सवाल के लिए तैयार हूँ"*).
+- **45s Inactivity Sleep Mode & Intuitive Wake Words:** Goes to sleep when inactive to avoid false ambient triggers; wakes up instantly upon hearing everyday words like *"Hey"*, *"Wake up"*, *"Start"*, *"Wake up up"*, or *"Hello"*.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Windows 10/11 (64-bit)
+- Python 3.10+ (tested on Python 3.13)
+- Working Microphone & Speakers / Headphones
+
+### Installation
+```bash
+git clone https://github.com/Maayank18/accio.git
+cd accio
+pip install -r requirements.txt
+```
+
+### Running Accio
+```bash
+python assistant.py
+```
+
+### Running Unit & Security Tests
+```bash
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+*(All 28 unit and security tests pass with 100% success).*

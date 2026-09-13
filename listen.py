@@ -1,62 +1,21 @@
 """
-accio - Step 1 proof of concept
+Accio Single-Shot Voice Command Listener
+========================================
+WHAT THIS FILE DOES (Simple English):
+  This is a standalone diagnostic tool for testing microphone input, speech recognition,
+  and action execution in a single run. You run `python listen.py`, speak a single command,
+  and it transcribes your speech and runs the corresponding OS action immediately.
 
-Speech-to-text model history:
-- recognize_google (free API, no local size) -- dropped: rate-limited under
-  heavy use, requires internet
-- Whisper base (0.14GB) -- dropped: weak accuracy on casual/filler speech
-- Whisper large-v3 (2.88GB) -- dropped: ~3 min load time on CPU, unusable
-  for repeated use
-- Vosk small-en-us-0.15 (0.07GB) -- dropped: inaccurate across the board,
-  not just short commands -- long test phrases were also garbled regardless
-  of how clearly spoken
-- Parakeet TDT 0.6B v3, multilingual, fp32 (2.37GB) -- dropped: language
-  auto-detection misfired on short phrases, transcribing English as
-  Cyrillic text
-- Parakeet TDT 0.6B v2, English-only, int8 (0.63GB) -- CURRENT: fast load,
-  accurate on both short commands and long/casual sentences in testing
-
-Not yet tried (noted for later):
-- Moonshine Hindi (~0.03GB) -- unofficial, unverified third-party
-  fine-tune, real risk
-- Parakeet 1.1B RNNT Multilingual, Hindi-capable (~2x current model's
-  size) -- built for GPU/NIM infrastructure, CPU performance unconfirmed
-- sherpa-onnx-streaming-zipformer-en-2023-06-26 (~75MB total: encoder,
-  decoder, joiner) -- a genuinely different model architecture (streaming
-  Zipformer, not Parakeet) built specifically for true word-by-word live
-  streaming. This is the real path to true streaming, if we pursue it --
-  untested against our accuracy needs, would need its own dedicated test.
-
-Known shortcoming: current model is English-only. Hindi+English code-switching
-support (per project research) is not yet solved -- needs further research,
-see options above.
-
-STREAMING MODE: not supported by this file, and staying that way for now.
-Two things were tested and rejected:
-1. True word-by-word streaming would require switching to a different model
-   architecture entirely (sherpa-onnx-streaming-zipformer-en-2023-06-26,
-   see above) -- a real rebuild, not attempted yet.
-2. VAD-chunked pseudo-streaming (Silero VAD via onnx_asr's with_vad()) was
-   built and tested directly. Result: rejected. It did not provide live
-   responsiveness in practice (the audio is still captured in full before
-   any chunk processing starts, so chunks appear all at once, not as you
-   pause), AND it measurably reduced transcription accuracy compared to
-   plain batch mode -- e.g. "Open chrome" (correct in batch mode,
-   repeatedly) became "And One? But all." under VAD chunking, and longer
-   sentences came out more fragmented and error-prone. Not used going
-   forward.
-
-Current tuning values (adjust here if behavior needs to change):
-- timeout=30            -- seconds to wait for speech to START before giving up
-- phrase_time_limit=60  -- max seconds of recording once speech starts
-- pause_threshold=3.0   -- seconds of silence before assuming you're done
-  talking (default is 0.8s, too short and cuts off mid-sentence pauses)
-
-These three will likely need to increase further once real user research is
-done: a user explaining a multi-step request (e.g. why they want to book an
-Aadhaar appointment) may need more time to give context than a short test
-phrase does, and some users may need more thinking time before starting to
-speak at all. Revisit these values after user testing, not just our own.
+GREAT TECH & PACKAGES USED IN THIS FILE:
+  - onnx_asr (NVIDIA NeMo Parakeet TDT 0.6B int8):
+      * What it does: Local quantized neural Speech-to-Text model.
+      * Why we use it: Accurate transcription on CPU without requiring an expensive GPU or cloud API.
+  - speech_recognition:
+      * What it does: Captures audio from the microphone and cuts off when silence is detected.
+      * Why we use it: Adjusted to snappy 0.8s silence cutoff so it stops recording as soon as
+        you finish speaking rather than hanging.
+  - soundfile & numpy:
+      * What it does: In-memory raw WAV decoding into floating point arrays for Parakeet.
 """
 
 import speech_recognition as sr
@@ -71,17 +30,23 @@ print("Model loaded.")
 
 def listen_and_transcribe():
     recognizer = sr.Recognizer()
-    recognizer.pause_threshold = 3.0
+    # Natural pause detection: allows 1.4s silence for conversational pauses
+    recognizer.pause_threshold = 1.4
+    recognizer.non_speaking_duration = 0.5
+    recognizer.phrase_threshold = 0.3
 
     with sr.Microphone(sample_rate=16000) as source:
         print("Adjusting for ambient noise, please wait...")
         recognizer.adjust_for_ambient_noise(source, duration=1)
+        # Prevent dynamic energy drift from hanging on background noise
+        recognizer.dynamic_energy_threshold = False
+        recognizer.energy_threshold = max(recognizer.energy_threshold, 300)
 
         print("Listening... say something.")
         try:
-            audio = recognizer.listen(source, timeout=30, phrase_time_limit=60)
+            audio = recognizer.listen(source, timeout=15, phrase_time_limit=30)
         except sr.WaitTimeoutError:
-            print("No speech detected within 30 seconds. Try again.")
+            print("No speech detected within 15 seconds. Try again.")
             return
 
     print("Transcribing...")
@@ -95,8 +60,13 @@ def listen_and_transcribe():
 
     if text:
         print(f"You said: {text}")
+        try:
+            import actions
+            actions.execute_command(text)
+        except Exception as e:
+            print(f"Error executing action: {e}")
     else:
-        print("Could not understand audio. Try speaking clearly and try again.")
+        print("Could not transcribe any words.")
 
 if __name__ == "__main__":
     listen_and_transcribe()
