@@ -59,7 +59,7 @@ def run_assistant():
 
     recognizer = sr.Recognizer()
     # Natural pause detection: allows 1.4s silence for conversational pauses so user isn't cut off mid-thought
-    recognizer.pause_threshold = 1.4
+    recognizer.pause_threshold = 2.0
     recognizer.non_speaking_duration = 0.5
     recognizer.phrase_threshold = 0.3
 
@@ -77,7 +77,8 @@ def run_assistant():
     print("  - 'search for SpaceX' / 'open YouTube' / 'open WhatsApp web'")
     print("  - 'how much RAM is occupied' / 'check battery'")
     print("  - 'volume up' / 'volume down' / 'mute' / 'take screenshot'")
-    print("  - 'exit' or 'goodbye' to quit\n")
+    print("  - Wake with 'hey accio' / 'hi accio' / 'hello accio' / 'wake up' (after 45s of silence, it sleeps)")
+    print("  - 'exit', 'goodbye', or 'bye' to fully stop the assistant\n")
 
     INACTIVITY_SLEEP_TIMEOUT = 45.0  # seconds of silence before entering sleep mode
     is_sleeping = False
@@ -103,16 +104,23 @@ def run_assistant():
                     if not is_sleeping and (time.time() - last_active_time > INACTIVITY_SLEEP_TIMEOUT):
                         is_sleeping = True
                         print("\n\033[94m[Accio State] Inactivity detected. Entering Sleep Mode...\033[0m")
-                        sleep_msg = "स्लीप मोड में जा रहा हूँ। मुझे जगाने के लिए 'hey', 'wake up', या 'start' बोलें।" if current_lang == 'hi' else "Going to sleep mode. Say 'Hey', 'Wake up', or 'Start' to wake me up."
-                        actions.speak(sleep_msg, lang=current_lang)
+                        sleep_msg = "Going to sleep mode. Say 'hey accio', 'hi accio', 'hello accio', or 'wake up' to wake me up."
+                        actions.speak(sleep_msg, lang='en')
                         actions.wait_until_speech_finishes()
-                        print("\033[94m[Accio Asleep - Listening for wake word: 'Hey', 'Wake up', 'Start', or 'Accio']\033[0m\n")
+                        print("\033[94m[Accio Asleep - Listening for wake word: 'hey accio' / 'hi accio' / 'hello accio' / 'wake up']\033[0m\n")
 
-                    status_prompt = "\033[94m[Accio Asleep (Say 'Hey', 'Wake up', or 'Start')...]\033[0m" if is_sleeping else "\033[90m[Listening...]\033[0m"
+                    status_prompt = "\033[94m[Accio Asleep (Say 'hey accio' / 'hi accio' / 'hello accio' / 'wake up')...]\033[0m" if is_sleeping else "\033[90m[Listening...]\033[0m"
                     print(status_prompt, end="\r", flush=True)
 
                     # Listen with 5s timeout to periodically refresh sleep-timer
-                    audio = recognizer.listen(source, timeout=5.0, phrase_time_limit=25)
+                    # phrase_time_limit=150 (2.5 min): generous ceiling for
+                    # users who need extended time to fully explain a
+                    # multi-step request (per research brief). Tradeoff: if
+                    # someone genuinely goes silent mid-recording without
+                    # triggering pause_threshold (e.g. long thinking pause
+                    # under 2s repeated), the mic could stay open a while
+                    # before this ceiling kicks in. Worth real-user testing.
+                    audio = recognizer.listen(source, timeout=5.0, phrase_time_limit=150)
                     print("                                                         \r", end="")
 
                     # Audio conversion to float32 numpy array
@@ -131,15 +139,19 @@ def run_assistant():
 
                     # Handle Sleep Mode Wake-Up
                     if is_sleeping:
+                        # NOTE: "accio" is a placeholder project name, not
+                        # final. When the product name changes, these
+                        # phrases must be updated to match.
+                        # Wake words: "hey accio", "hi accio", "hello accio",
+                        # or plain "wake up" (4 options total). Greeting
+                        # word (hi/hey/hello) is NOT optional when paired
+                        # with "accio" -- those words alone are too common
+                        # in normal speech and would false-trigger. "wake
+                        # up" alone is kept as a 4th, simpler option.
+                        # (?:\s+\w+)? allows one filler word in between,
+                        # e.g. "hey, um, accio".
                         WAKE_WORDS_PATTERN = (
-                            r'\b(?:'
-                            r'hey(?:\s+there)?|'
-                            r'wake\s*up(?:\s+(?:up|wake\s*up|now|please))?|'
-                            r'start(?:\s+(?:assistant|listening|up))?|'
-                            r'hello|hi|'
-                            r'accio|akio|echo|hey\s+accio|ok\s+accio|'
-                            r'jag\s*jao|suno|shuru\s*karo|uth\s*jao'
-                            r')\b'
+                            r'\b(?:(?:hi|hey|hello)(?:\s+\w+)?[,]?\s*accio|wake\s*up)\b'
                         )
                         wake_match = re.search(WAKE_WORDS_PATTERN, text, re.IGNORECASE)
 
@@ -155,15 +167,11 @@ def run_assistant():
                             last_active_time = time.time()
                             print(f"\n\033[92m[Accio Woke Up!]\033[0m (Heard: '{text}')")
 
-                            # Check if a command was appended after wake word (e.g., "Wake up open youtube")
+                            # Check if a command was appended after wake word (e.g., "hey accio, open youtube")
+                            # Matches WAKE_WORDS_PATTERN above -- anchored to
+                            # the START (^) since this strips a prefix.
                             WAKE_PREFIX_STRIP = (
-                                r'^(?:'
-                                r'hey\s+accio|ok\s+accio|hello\s+accio|accio|akio|echo|'
-                                r'wake\s*up(?:\s+(?:up|wake\s*up|now|please))?|'
-                                r'start(?:\s+(?:assistant|listening|up))?|'
-                                r'hey(?:\s+there)?|hello|hi|'
-                                r'jag\s*jao|suno|shuru\s*karo|uth\s*jao'
-                                r')\b[,\s]*'
+                                r'^(?:(?:hi|hey|hello)(?:\s+\w+)?[,]?\s*accio|wake\s*up)\b[,\s]*'
                             )
                             command_after = text.strip()
                             while True:
@@ -172,12 +180,19 @@ def run_assistant():
                                 if command_after == prev_cmd:
                                     break
 
-                            if command_after:
+                            # BUGFIX: if only punctuation is left after
+                            # stripping the wake phrase (e.g. "hi accio."
+                            # -> "."), that must NOT be treated as a real
+                            # command (previously caused it to search the
+                            # web for a period).
+                            has_real_content = bool(re.search(r'[a-zA-Z0-9]', command_after))
+
+                            if command_after and has_real_content:
                                 text = command_after
                                 print(f"\033[92m[Accio Direct Execution]\033[0m Running '{text}' immediately...")
                             else:
-                                wake_response = "हाँ, मैं जाग गया हूँ! बताइए क्या मदद करूँ?" if current_lang == 'hi' else "Hey, I am awake and ready for your commands!"
-                                actions.speak(wake_response, lang=current_lang)
+                                wake_response = "Hey, I am awake and ready for your commands!"
+                                actions.speak(wake_response, lang='en')
                                 actions.wait_until_speech_finishes()
                                 continue
                         else:
@@ -201,8 +216,11 @@ def run_assistant():
                     actions.wait_until_speech_finishes()
 
                     # Clear Turn-Taking Readiness Cue
-                    ready_cue = "मैं अगले सवाल के लिए तैयार हूँ।" if current_lang == 'hi' else "Hey, I am ready for the next query."
-                    actions.speak(ready_cue, lang=current_lang)
+                    # Forced to English -- current_lang/Hindi detection is
+                    # unreliable (separate known bug, not fixed tonight),
+                    # was causing random Hindi responses to English input.
+                    ready_cue = "Hey, I am ready for the next query."
+                    actions.speak(ready_cue, lang='en')
                     print(f"\033[92m[Accio Turn-Taking]\033[0m {ready_cue}")
                     actions.wait_until_speech_finishes()
                     print("-" * 50)
@@ -210,8 +228,27 @@ def run_assistant():
                 except sr.WaitTimeoutError:
                     # Timeout periodically triggers so we can evaluate the sleep timer
                     continue
+                except OSError as e:
+                    # Microphone hardware issue -- e.g. device disconnected,
+                    # unplugged, or claimed by another application. This is
+                    # NOT recoverable by just looping again; alert clearly.
+                    print(f"[Accio] Microphone error: {e}")
+                    print("[Accio] Check that your microphone is connected and not in use by another app.")
+                    continue
+                except ImportError as e:
+                    # A required action module failed to import (e.g. a
+                    # missing dependency for a specific action file). This
+                    # means a whole category of commands may be unusable
+                    # until fixed -- worth surfacing clearly, not hiding.
+                    print(f"[Accio] A required module is missing: {e}")
+                    print("[Accio] Some commands may not work until this is fixed. Run: pip install -r requirements.txt")
+                    continue
                 except Exception as e:
-                    print(f"[Loop Error] {e}")
+                    # Genuinely unexpected error -- not one of the cases
+                    # above. Logged with full detail so it can be diagnosed
+                    # later, but the assistant keeps running rather than
+                    # crashing outright.
+                    print(f"[Accio Unexpected Error] {type(e).__name__}: {e}")
                     continue
 
     except KeyboardInterrupt:

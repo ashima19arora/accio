@@ -419,8 +419,11 @@ def parse_intent(transcription: str) -> Intent:
        re.search(r'^(?:who\s+are\s+you|what\s+can\s+you\s+do|how\s+are\s+you(?:\s+doing)?|help(?:\s+me)?|aap\s+kaun\s+ho|tum\s+kaun\s+ho)$', text):
         return Intent(name="GREETING", params={"original": text}, raw_text=transcription)
 
-    # 17. Exit / Shutdown Assistant (English & Hindi)
-    if re.search(r'\b(exit|quit|stop\s+listening|goodbye|bye|alvida|band\s+karo\s+accio)\b', text):
+    # 17. Exit / Shutdown Assistant
+    # Trimmed to 3 clear English phrases (was ~7 English/Hindi variants).
+    # re.search matches anywhere in the sentence, so "Okay, thanks, goodbye,
+    # I'll be back in a minute" still correctly triggers exit.
+    if re.search(r'\b(exit|goodbye|bye)\b', text, re.IGNORECASE):
         return Intent(name="EXIT_ASSISTANT", params={}, raw_text=transcription)
 
     # 18. Factual & Knowledge Q&A Queries ("who is X", "what is X", "tell me about X", "explain X", Hindi: "X kya hai", "X ke baare mein batao")
